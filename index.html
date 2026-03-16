@@ -504,7 +504,7 @@ async function doChangePw(){
 
 // ── Claude API ─────────────────────────────────────────────────────────────
 async function callClaude(sys,user,max=2000){
-  const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,system:sys,messages:[{role:'user',content:user}]})});
+  const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,system:sys,messages:[{role:'user',content:user}]})});
   const d=await r.json();return d.content?.[0]?.text??'';
 }
 async function extractRecipe(input){
