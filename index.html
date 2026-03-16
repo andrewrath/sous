@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Sous</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#4a7c6f"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Sous"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --cream:#f7f4ee;--cream-dark:#ede9df;--white:#ffffff;
+      --sage:#4a7c6f;--sage-light:#7aab9c;--sage-pale:#e4eeeb;
+      --sky:#5b8fbe;--sky-light:#8fb8d8;--sky-pale:#e8f1f8;
+      --lavender:#8b7bb5;--lav-pale:#ede9f5;
+      --mint:#a8d5c2;--text:#2a2a2a;--text-mid:#5a5a5a;--text-soft:#9a9a9a;
+      --border:#ddd8cc;--border-soft:#ece8e0;
+      --error:#c0503a;--error-pale:#fef0ee;
+      --shadow:0 2px 16px rgba(0,0,0,.07);--shadow-lg:0 8px 40px rgba(0,0,0,.13);
+      --radius:14px;--radius-sm:8px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{font-family:'Nunito',sans-serif;background:var(--cream);color:var(--text);height:100%;overscroll-behavior:none;}
+    #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+    ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    .fade-up{animation:fadeUp .32s ease forwards;}.fade-in{animation:fadeIn .22s ease forwards;}
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:'Nunito',sans-serif;font-weight:600;font-size:14px;border-radius:28px;border:none;cursor:pointer;padding:11px 22px;transition:all .18s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+    .btn:active{transform:scale(.97);}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+    .btn-sage{background:var(--sage);color:#fff;}.btn-sage:hover:not(:disabled){background:#3d6b5f;}
+    .btn-ghost{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);}.btn-ghost:hover:not(:disabled){border-color:var(--sage-light);color:var(--sage);}
+    .btn-sky{background:var(--sky-pale);color:var(--sky);border:1.5px solid var(--sky-light);}.btn-sky:hover:not(:disabled){background:#d4e8f5;}
+    .btn-red{background:var(--error-pale);color:var(--error);border:1.5px solid #e8b0a0;}
+    .btn-sm{padding:7px 16px;font-size:13px;}.btn-full{width:100%;}
+    /* Fields */
+    .field-label{display:block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft);margin-bottom:7px;}
+    .field-wrap{position:relative;}
+    .field-input,.field-textarea,.field-select{width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:11px 14px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .2s,background .2s;-webkit-appearance:none;}
+    .field-input:focus,.field-textarea:focus,.field-select:focus{border-color:var(--sage-light);background:var(--white);}
+    .field-input.err{border-color:var(--error);}
+    .field-textarea{resize:vertical;min-height:110px;}
+    .pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-soft);font-size:16px;padding:4px;-webkit-tap-highlight-color:transparent;}
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+    .spinner-sage{border-color:var(--border);border-top-color:var(--sage);}
+    /* AUTH */
+    #auth-root{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;background:var(--cream);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+    #auth-splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;}
+    .splash-bowl{font-size:72px;animation:float 3.5s ease-in-out infinite;margin-bottom:24px;}
+    .splash-logo{font-family:'Playfair Display',serif;font-style:italic;font-size:52px;font-weight:400;color:var(--sage);letter-spacing:-1px;line-height:1;margin-bottom:6px;}
+    .splash-tagline{font-size:14px;color:var(--text-soft);margin-bottom:48px;}
+    .splash-btns{display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;}
+    .divider{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-soft);font-family:'DM Mono',monospace;letter-spacing:.08em;margin:4px 0;}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    #auth-panel{flex:1;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    .afw{max-width:400px;width:100%;margin:0 auto;padding:32px 28px calc(32px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:20px;}
+    .auth-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-soft);font-size:13px;cursor:pointer;padding:0;font-family:'Nunito',sans-serif;}
+    .auth-back:hover{color:var(--sage);}
+    .auth-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:var(--text);line-height:1.2;}
+    .auth-sub{font-size:13px;color:var(--text-soft);line-height:1.6;margin-top:4px;}
+    .afg{display:flex;flex-direction:column;gap:14px;}
+    .auth-err{background:var(--error-pale);border:1px solid #e8b0a0;border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;color:var(--error);line-height:1.5;}
+    .auth-ok{background:#edf7f0;border:1px solid var(--sage-light);border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;color:var(--sage);line-height:1.5;}
+    .auth-foot{font-size:13px;color:var(--text-soft);text-align:center;}
+    .auth-foot a{color:var(--sage);cursor:pointer;font-weight:600;text-decoration:none;}
+    .auth-tabs{display:flex;border:1.5px solid var(--border);border-radius:28px;overflow:hidden;}
+    .auth-tab{flex:1;padding:10px;font-family:'Nunito',sans-serif;font-weight:600;font-size:13px;text-align:center;cursor:pointer;background:transparent;border:none;color:var(--text-soft);transition:all .18s;}
+    .auth-tab.active{background:var(--sage);color:#fff;}
+    /* Magic link success card */
+    .magic-sent{text-align:center;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+    .magic-icon{font-size:52px;}
+    /* App chrome */
+    #app-root{display:none;flex:1;overflow:hidden;flex-direction:column;}
+    #header{background:var(--white);border-bottom:1px solid var(--border-soft);padding:0 20px;height:60px;display:flex;align-items:center;gap:14px;flex-shrink:0;position:sticky;top:0;z-index:40;}
+    .logo{font-family:'Playfair Display',serif;font-size:26px;font-style:italic;font-weight:400;color:var(--sage);letter-spacing:-.5px;flex-shrink:0;}
+    .logo sup{font-family:'DM Mono',monospace;font-style:normal;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--lavender);vertical-align:super;margin-left:3px;}
+    #search-wrap{flex:1;position:relative;max-width:300px;}
+    #search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-soft);pointer-events:none;}
+    #search{width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:24px;color:var(--text);padding:8px 14px 8px 36px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .2s;}
+    #search:focus{border-color:var(--sage-light);}
+    .hdr-actions{margin-left:auto;display:flex;gap:9px;align-items:center;}
+    .avatar-btn{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sage-pale),var(--lav-pale));border:1.5px solid var(--sage-light);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--sage);transition:all .18s;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+    .avatar-btn:hover{border-color:var(--sage);}
+    .acct-drop{position:absolute;top:calc(100%+8px);right:0;background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);min-width:210px;z-index:100;overflow:hidden;animation:fadeUp .18s ease;}
+    .acct-hdr{padding:14px 16px;border-bottom:1px solid var(--border-soft);background:var(--cream);}
+    .acct-email{font-size:12px;color:var(--text-soft);font-family:'DM Mono',monospace;margin-top:2px;word-break:break-all;}
+    .acct-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:13px;color:var(--text-mid);transition:background .15s;-webkit-tap-highlight-color:transparent;}
+    .acct-item:hover{background:var(--cream);}.acct-item.danger{color:var(--error);}
+    .acct-item svg{width:15px;height:15px;flex-shrink:0;}
+    .hdr-acct-wrap{position:relative;}
+    /* Sidebar */
+    #body-wrap{display:flex;flex:1;overflow:hidden;}
+    #sidebar{width:230px;background:var(--white);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+    .sb-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-soft);padding:18px 18px 8px;}
+    .si{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;cursor:pointer;border-left:3px solid transparent;border-radius:0 8px 8px 0;margin-right:8px;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+    .si:hover{background:var(--cream);}.si.active{background:var(--sage-pale);border-color:var(--sage);}.si.active .si-name{color:var(--sage);font-weight:600;}
+    .si-left{display:flex;align-items:center;gap:9px;}.si-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .si-name{font-size:13.5px;color:var(--text-mid);transition:color .15s;}
+    .si-count{font-family:'DM Mono',monospace;font-size:10px;background:var(--cream-dark);color:var(--text-soft);padding:1px 8px;border-radius:12px;}
+    .folder-input-wrap{padding:0 12px 12px;display:flex;gap:7px;}
+    .folder-input{flex:1;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:'Nunito',sans-serif;outline:none;}
+    .folder-confirm{background:var(--sage);border:none;color:#fff;border-radius:8px;padding:0 12px;cursor:pointer;font-size:14px;}
+    .week-strip{margin-top:10px;border-top:1px solid var(--border-soft);padding-top:8px;}
+    .week-item{display:flex;align-items:center;gap:8px;padding:8px 18px;cursor:pointer;font-size:12.5px;color:var(--sage);-webkit-tap-highlight-color:transparent;}
+    .week-item:hover{background:var(--sage-pale);}
+    /* Grid */
+    #main{flex:1;overflow-y:auto;padding:22px;-webkit-overflow-scrolling:touch;}
+    .recipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+    .card{background:var(--white);border:1.5px solid var(--border-soft);border-radius:var(--radius);padding:18px;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+    .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+    .card.week-on{border-color:var(--sage-light);}
+    .card.week-on::before{content:'✓ This Week';position:absolute;top:0;right:0;background:var(--sage);color:#fff;font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.08em;padding:4px 10px;border-bottom-left-radius:8px;}
+    .card-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:6px;color:var(--text);}
+    .card-desc{font-size:12px;color:var(--text-soft);line-height:1.5;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+    .card-tags{display:flex;flex-wrap:wrap;gap:5px;}
+    .meta-pill{display:inline-flex;align-items:center;gap:4px;background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:10.5px;color:var(--text-mid);font-family:'DM Mono',monospace;}
+    .tag{background:var(--lav-pale);color:var(--lavender);border-radius:20px;padding:2px 9px;font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.04em;}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:12px;border-top:1px solid var(--border-soft);}
+    .card-date{font-size:10px;color:var(--text-soft);font-family:'DM Mono',monospace;}
+    .week-toggle{background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text-soft);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+    .week-toggle.on{border-color:var(--sage);color:var(--sage);background:var(--sage-pale);}
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:14px;text-align:center;}
+    .empty-icon{font-size:64px;margin-bottom:4px;}
+    .empty h2{font-family:'Playfair Display',serif;font-size:24px;font-style:italic;color:var(--text-mid);}
+    .empty p{font-size:13px;color:var(--text-soft);max-width:280px;line-height:1.6;}
+    /* Sync indicator */
+    .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--sage-light);flex-shrink:0;transition:background .3s;}
+    .sync-dot.syncing{background:var(--sky-light);animation:spin 1s linear infinite;}
+    .sync-dot.err{background:var(--error);}
+    /* Modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(42,42,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:100;display:flex;align-items:flex-end;padding:0;animation:fadeIn .2s ease;}
+    @media(min-width:600px){.modal-bg{align-items:center;padding:20px;}}
+    .modal{background:var(--white);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:640px;margin:0 auto;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;-webkit-overflow-scrolling:touch;}
+    @media(min-width:600px){.modal{border-radius:var(--radius);}}
+    .modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;}
+    @media(min-width:600px){.modal-handle{display:none;}}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 16px;border-bottom:1px solid var(--border-soft);position:sticky;top:0;background:var(--white);z-index:1;}
+    .modal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;}
+    .modal-close{background:var(--cream);border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-mid);font-size:18px;transition:background .15s;}
+    .modal-close:hover{background:var(--border);}
+    .modal-body{padding:22px;display:flex;flex-direction:column;gap:18px;}
+    /* Detail */
+    .detail-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+    .detail-sec{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--sage);margin-bottom:12px;margin-top:20px;padding-bottom:6px;border-bottom:2px solid var(--sage-pale);}
+    .ing-row{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border-soft);}
+    .ing-amt{font-family:'DM Mono',monospace;font-size:11px;color:var(--sky);min-width:65px;flex-shrink:0;}
+    .step-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+    .step-num{font-family:'DM Mono',monospace;font-size:11px;background:var(--sage);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+    .tip-box{background:var(--lav-pale);border:1px solid #d4c8f0;border-radius:var(--radius-sm);padding:14px 16px;margin-top:20px;}
+    .tip-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--lavender);margin-bottom:8px;}
+    /* Grocery */
+    .g-sec-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage);padding:8px 0 6px;border-bottom:1.5px solid var(--sage-pale);margin-bottom:8px;}
+    .g-item{display:flex;align-items:center;gap:12px;padding:8px 4px;cursor:pointer;transition:opacity .15s;}
+    .g-item.checked{opacity:.4;text-decoration:line-through;}
+    .g-check{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+    .g-item.checked .g-check{background:var(--sage);border-color:var(--sage);}
+    .g-qty{font-family:'DM Mono',monospace;font-size:11px;color:var(--sky);min-width:70px;}
+    .share-banner{background:linear-gradient(135deg,var(--sky-pale),var(--sage-pale));border:1.5px solid var(--sky-light);border-radius:var(--radius-sm);padding:14px 16px;}
+    .share-banner-title{font-weight:600;font-size:13px;color:var(--sky);margin-bottom:4px;}
+    .share-banner-text{font-size:12px;color:var(--text-mid);line-height:1.5;}
+    /* Tab bar */
+    #tab-bar{display:none;}
+    @media(max-width:640px){
+      #sidebar{display:none;}
+      #tab-bar{display:flex;background:var(--white);border-top:1px solid var(--border-soft);padding:8px 0 calc(8px + env(safe-area-inset-bottom));flex-shrink:0;}
+      .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent;color:var(--text-soft);font-size:10px;transition:color .15s;position:relative;}
+      .tab.active{color:var(--sage);}.tab svg{width:22px;height:22px;}
+      #main{padding:16px;}.recipe-grid{grid-template-columns:1fr 1fr;gap:12px;}#header{padding:0 16px;}
+    }
+    @media(max-width:400px){.recipe-grid{grid-template-columns:1fr;}}
+    .tab-badge{background:var(--sage);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-family:'DM Mono',monospace;position:absolute;top:-2px;right:14px;}
+    #install-tip{display:none;position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:16px;right:16px;z-index:300;background:var(--text);color:#fff;border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;line-height:1.5;box-shadow:var(--shadow-lg);animation:fadeUp .3s ease;}
+    #install-tip .tip-arrow{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid var(--text);}
+    #itc{float:right;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;margin-left:8px;}
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- AUTH -->
+  <div id="auth-root">
+    <div id="auth-splash" class="fade-in">
+      <div class="splash-bowl">🫙</div>
+      <div class="splash-logo">sous</div>
+      <div class="splash-tagline">Your personal recipe vault</div>
+      <div class="splash-btns">
+        <button class="btn btn-sage btn-full" onclick="showAuthForm('signup')">Create account</button>
+        <div class="divider">or</div>
+        <button class="btn btn-ghost btn-full" onclick="showAuthForm('signin')">Sign in</button>
+      </div>
+    </div>
+    <div id="auth-panel" style="display:none;">
+      <div class="afw" id="auth-inner"></div>
+    </div>
+  </div>
+  <!-- APP -->
+  <div id="app-root" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+    <header id="header">
+      <div class="logo">sous <sup>chef</sup></div>
+      <div id="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search" type="search" placeholder="Search recipes…" autocomplete="off"/>
+      </div>
+      <div class="hdr-actions">
+        <div class="sync-dot" id="sync-dot" title="Synced"></div>
+        <button class="btn btn-ghost btn-sm" id="grocery-btn" style="display:none;">🛒 <span id="grocery-count"></span></button>
+        <button class="btn btn-sage btn-sm" id="add-btn">+ Add</button>
+        <div class="hdr-acct-wrap">
+          <button class="avatar-btn" id="avatar-btn" onclick="toggleAcctMenu()"></button>
+          <div id="acct-menu" style="display:none;" class="acct-drop">
+            <div class="acct-hdr">
+              <div style="font-weight:600;font-size:14px;" id="acct-name-disp"></div>
+              <div class="acct-email" id="acct-email-disp"></div>
+            </div>
+            <div class="acct-item" onclick="showChangePw()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Change password
+            </div>
+            <div class="acct-item danger" onclick="doSignOut()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out
+            </div>
+            <div class="acct-item danger" onclick="confirmDeleteAcct()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>Delete account
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div id="body-wrap">
+      <aside id="sidebar">
+        <div class="sb-label">Folders</div>
+        <div id="folder-list"></div>
+        <div style="padding:6px 18px 0;"><button class="btn btn-ghost btn-sm" id="new-folder-btn" style="width:100%;justify-content:center;">+ New folder</button></div>
+        <div id="folder-input-wrap" style="display:none;" class="folder-input-wrap">
+          <input class="folder-input" id="folder-name-input" placeholder="Folder name" maxlength="30"/>
+          <button class="folder-confirm" id="folder-confirm-btn">✓</button>
+        </div>
+        <div id="week-strip" class="week-strip" style="display:none;">
+          <div class="sb-label">This Week</div>
+          <div id="week-list"></div>
+          <div style="padding:8px 18px 4px;"><button class="btn btn-sage btn-sm" id="sb-grocery-btn" style="width:100%;justify-content:center;">🛒 Grocery List</button></div>
+        </div>
+      </aside>
+      <main id="main">
+        <div id="recipe-grid" class="recipe-grid"></div>
+        <div id="empty-state" class="empty" style="display:none;">
+          <div class="empty-icon">🌿</div>
+          <h2>Nothing here yet</h2>
+          <p>Paste a recipe URL, social post, or any text to extract and save it.</p>
+          <button class="btn btn-sage" id="empty-add-btn">+ Add your first recipe</button>
+        </div>
+      </main>
+    </div>
+    <nav id="tab-bar">
+      <div class="tab active" id="tab-recipes" onclick="setTab('recipes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Recipes
+      </div>
+      <div class="tab" id="tab-folders" onclick="setTab('folders')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Folders
+      </div>
+      <div class="tab" id="tab-week" onclick="setTab('week')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="tab-week-badge" class="tab-badge" style="display:none;"></span>This Week
+      </div>
+      <div class="tab" id="tab-grocery" onclick="showGrocery()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Grocery
+      </div>
+    </nav>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="install-tip">
+  <button id="itc">×</button>
+  <strong>Install Sous on your iPhone:</strong><br/>Tap <strong>Share ↗</strong> in Safari → <em>"Add to Home Screen"</em>
+  <div class="tip-arrow"></div>
+</div>
+
+<script>
+'use strict';
+// ── Supabase init ──────────────────────────────────────────────────────────
+const SUPA_URL = 'https://xwolewtxxbkkhhvukohl.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3b2xld3R4eGJra2hodnVrb2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2MDY0MzQsImV4cCI6MjA4OTE4MjQzNH0.Hy5hf8F8NEUJlIodK2zKe6mEIgsHD4yHMh-lW-RFZxU';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+const esc = (s='') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt = d => new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const uid = () => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+const COLORS = ['#4a7c6f','#5b8fbe','#8b7bb5','#c07860','#6a9e8e','#7a8fb5'];
+
+// ── App state ──────────────────────────────────────────────────────────────
+let CU = null; // current supabase user
+let S = { folders:[], recipes:[], activeFolder:null, search:'', activeTab:'recipes' };
+
+// ── Sync indicator ─────────────────────────────────────────────────────────
+function setSyncing(v){ const d=document.getElementById('sync-dot'); if(!d)return; d.className='sync-dot'+(v===true?' syncing':v==='err'?' err':''); }
+
+// ── DB helpers ─────────────────────────────────────────────────────────────
+async function loadFolders(){
+  const {data,error}=await sb.from('folders').select('*').order('position');
+  if(!error) S.folders=data.map(dbToFolder);
+}
+async function loadRecipes(){
+  const {data,error}=await sb.from('recipes').select('*').order('created_at',{ascending:false});
+  if(!error) S.recipes=data.map(dbToRecipe);
+}
+function dbToFolder(r){return{id:r.id,name:r.name,color:r.color,position:r.position};}
+function dbToRecipe(r){
+  return{
+    id:r.id, folderId:r.folder_id, title:r.title, description:r.description,
+    servings:r.servings, prepTime:r.prep_time, cookTime:r.cook_time, totalTime:r.total_time,
+    cuisine:r.cuisine, tags:r.tags||[], ingredients:r.ingredients||[],
+    steps:r.steps||[], tips:r.tips||[], mediaUrls:r.media_urls||[],
+    sourceUrl:r.source_url, weekSelected:r.week_selected, createdAt:new Date(r.created_at).getTime()
+  };
+}
+function recipeToDb(r,userId){
+  return{
+    id:r.id, user_id:userId, folder_id:r.folderId||null,
+    title:r.title, description:r.description||null,
+    servings:r.servings||null, prep_time:r.prepTime||null, cook_time:r.cookTime||null, total_time:r.totalTime||null,
+    cuisine:r.cuisine||null, tags:r.tags||[], ingredients:r.ingredients||[],
+    steps:r.steps||[], tips:r.tips||[], media_urls:r.mediaUrls||[],
+    source_url:r.sourceUrl||null, week_selected:!!r.weekSelected
+  };
+}
+
+// ── Auth screens ───────────────────────────────────────────────────────────
+function showSplash(){ document.getElementById('auth-splash').style.display='flex'; document.getElementById('auth-panel').style.display='none'; }
+function showAuthPanel(html){ document.getElementById('auth-splash').style.display='none'; document.getElementById('auth-panel').style.display='flex'; document.getElementById('auth-inner').innerHTML=html; }
+
+function showAuthForm(mode){
+  // mode: 'signin' | 'signup'
+  const isSignUp = mode==='signup';
+  showAuthPanel(`
+    <button class="auth-back" onclick="showSplash()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>Back
+    </button>
+    <div><div class="auth-title">${isSignUp?'Create account':'Welcome back'}</div>
+    <div class="auth-sub">${isSignUp?'Save recipes across all your devices.':'Sign in to access your recipes.'}</div></div>
+    <!-- Method tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-pw" onclick="switchAuthTab('pw')">Password</button>
+      <button class="auth-tab" id="tab-magic" onclick="switchAuthTab('magic')">Magic link</button>
+    </div>
+    <!-- Password form -->
+    <div id="form-pw" class="afg">
+      <div><label class="field-label">Email</label><input class="field-input" id="au-email" type="email" placeholder="you@example.com" autocomplete="email" autocapitalize="none" spellcheck="false"/></div>
+      <div><label class="field-label">Password</label>
+        <div class="field-wrap"><input class="field-input" id="au-pw" type="password" placeholder="${isSignUp?'At least 8 characters':'Your password'}" autocomplete="${isSignUp?'new-password':'current-password'}" onkeydown="if(event.key==='Enter')doPwAuth(${isSignUp})"/>
+        <button class="pw-toggle" onclick="togglePwV('au-pw',this)" type="button">👁</button></div>
+        ${isSignUp?`<div style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);overflow:hidden;"><div id="pw-bar" style="height:100%;width:0;border-radius:2px;transition:width .3s,background .3s;background:var(--sage);"></div></div><div id="pw-lbl" style="font-size:10px;color:var(--text-soft);font-family:'DM Mono',monospace;margin-top:4px;"></div>`:''}
+      </div>
+      ${isSignUp?`<div><label class="field-label">Confirm password</label><div class="field-wrap"><input class="field-input" id="au-pw2" type="password" placeholder="Repeat password" autocomplete="new-password"/><button class="pw-toggle" onclick="togglePwV('au-pw2',this)" type="button">👁</button></div></div>`:''}
+      <div id="au-err" style="display:none;" class="auth-err"></div>
+      <button class="btn btn-sage btn-full" id="au-btn" onclick="doPwAuth(${isSignUp})">${isSignUp?'Create account':'Sign in'}</button>
+    </div>
+    <!-- Magic link form -->
+    <div id="form-magic" class="afg" style="display:none;">
+      <div><label class="field-label">Email</label><input class="field-input" id="au-ml-email" type="email" placeholder="you@example.com" autocomplete="email" autocapitalize="none" spellcheck="false" onkeydown="if(event.key==='Enter')doMagicLink()"/></div>
+      <div id="au-ml-err" style="display:none;" class="auth-err"></div>
+      <button class="btn btn-sky btn-full" id="au-ml-btn" onclick="doMagicLink()">✉ Send magic link</button>
+      <p style="font-size:12px;color:var(--text-soft);text-align:center;line-height:1.6;">We'll email you a link — tap it to sign in instantly. No password needed.</p>
+    </div>
+    <div class="auth-foot">${isSignUp?'Already have an account? <a onclick="showAuthForm(\'signin\')">Sign in</a>':'New here? <a onclick="showAuthForm(\'signup\')">Create an account</a>'}</div>
+  `);
+  document.getElementById('au-email')?.focus();
+  if(isSignUp) document.getElementById('au-pw')?.addEventListener('input', e=>updatePwStr(e.target.value));
+}
+
+function switchAuthTab(t){
+  document.getElementById('tab-pw').classList.toggle('active',t==='pw');
+  document.getElementById('tab-magic').classList.toggle('active',t==='magic');
+  document.getElementById('form-pw').style.display=t==='pw'?'flex':'none';
+  document.getElementById('form-magic').style.display=t==='magic'?'flex':'none';
+}
+
+async function doPwAuth(isSignUp){
+  const email=document.getElementById('au-email')?.value.trim();
+  const pw=document.getElementById('au-pw')?.value;
+  const pw2=document.getElementById('au-pw2')?.value;
+  const btn=document.getElementById('au-btn');
+  const setE=m=>{const e=document.getElementById('au-err');e.textContent=m;e.style.display='block';};
+  if(!email||!pw)return setE('Please enter your email and password.');
+  if(isSignUp&&pw.length<8)return setE('Password must be at least 8 characters.');
+  if(isSignUp&&pw!==pw2)return setE('Passwords do not match.');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> '+(isSignUp?'Creating…':'Signing in…');
+  const {data,error} = isSignUp
+    ? await sb.auth.signUp({email,password:pw})
+    : await sb.auth.signInWithPassword({email,password:pw});
+  if(error){ btn.disabled=false; btn.textContent=isSignUp?'Create account':'Sign in'; return setE(error.message); }
+  if(isSignUp && !data.session){
+    // Email confirmation required
+    showAuthPanel(`<div class="magic-sent"><div class="magic-icon">📬</div>
+      <div class="auth-title" style="font-size:22px;">Check your email</div>
+      <p style="font-size:14px;color:var(--text-mid);line-height:1.6;max-width:280px;">We sent a confirmation link to <strong>${esc(email)}</strong>. Tap it to activate your account, then come back and sign in.</p>
+      <button class="btn btn-ghost" onclick="showAuthForm('signin')">Back to sign in</button></div>`);
+    return;
+  }
+  // Session exists — boot app
+  CU = data.user || data.session?.user;
+  bootApp();
+}
+
+async function doMagicLink(){
+  const email=document.getElementById('au-ml-email')?.value.trim();
+  const btn=document.getElementById('au-ml-btn');
+  const setE=m=>{const e=document.getElementById('au-ml-err');e.textContent=m;e.style.display='block';};
+  if(!email)return setE('Please enter your email address.');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Sending…';
+  const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin}});
+  if(error){ btn.disabled=false; btn.textContent='✉ Send magic link'; return setE(error.message); }
+  showAuthPanel(`<div class="magic-sent"><div class="magic-icon">✉️</div>
+    <div class="auth-title" style="font-size:22px;">Magic link sent!</div>
+    <p style="font-size:14px;color:var(--text-mid);line-height:1.6;max-width:280px;">Check your inbox at <strong>${esc(email)}</strong> and tap the link to sign in. You can close this tab.</p>
+    <button class="btn btn-ghost" onclick="showSplash()">Back</button></div>`);
+}
+
+function updatePwStr(pw){
+  const bar=document.getElementById('pw-bar'),lbl=document.getElementById('pw-lbl');if(!bar)return;
+  let s=0;if(pw.length>=8)s++;if(pw.length>=12)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^A-Za-z0-9]/.test(pw))s++;
+  const L=[{w:'15%',c:'#c0503a',t:'Weak'},{w:'35%',c:'#c0503a',t:'Weak'},{w:'55%',c:'#c07860',t:'Fair'},{w:'75%',c:'#7aab9c',t:'Good'},{w:'100%',c:'#4a7c6f',t:'Strong'}];
+  const l=L[Math.min(s,4)];bar.style.width=pw?l.w:'0';bar.style.background=l.c;if(lbl)lbl.textContent=pw?l.t:'';
+}
+function togglePwV(id,btn){const i=document.getElementById(id);if(!i)return;i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁':'🙈';}
+
+// ── Boot app ───────────────────────────────────────────────────────────────
+async function bootApp(){
+  document.getElementById('auth-root').style.display='none';
+  const ar=document.getElementById('app-root');ar.style.display='flex';
+  // Avatar initials from email
+  const email=CU?.email||'';
+  const initials=email.slice(0,2).toUpperCase();
+  document.getElementById('avatar-btn').textContent=initials;
+  document.getElementById('acct-name-disp').textContent=email.split('@')[0];
+  document.getElementById('acct-email-disp').textContent=email;
+  S.activeFolder=null;S.search='';S.activeTab='recipes';
+  // Load data
+  setSyncing(true);
+  await Promise.all([loadFolders(),loadRecipes()]);
+  setSyncing(false);
+  // Wire events
+  document.getElementById('new-folder-btn')?.addEventListener('click',()=>{const w=document.getElementById('folder-input-wrap');w.style.display=w.style.display==='none'?'flex':'none';if(w.style.display==='flex')document.getElementById('folder-name-input')?.focus();});
+  document.getElementById('folder-confirm-btn')?.addEventListener('click',addFolder);
+  document.getElementById('folder-name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')addFolder();});
+  document.getElementById('search')?.addEventListener('input',e=>{S.search=e.target.value;render();});
+  document.getElementById('add-btn')?.addEventListener('click',()=>showAdd());
+  document.getElementById('empty-add-btn')?.addEventListener('click',()=>showAdd());
+  document.getElementById('grocery-btn')?.addEventListener('click',showGrocery);
+  document.getElementById('sb-grocery-btn')?.addEventListener('click',showGrocery);
+  document.addEventListener('click',e=>{if(!document.getElementById('acct-menu')?.contains(e.target)&&!document.getElementById('avatar-btn')?.contains(e.target))document.getElementById('acct-menu').style.display='none';});
+  render();
+  showInstallTip();
+}
+
+// ── Account menu ───────────────────────────────────────────────────────────
+function toggleAcctMenu(){const m=document.getElementById('acct-menu');m.style.display=m.style.display==='none'?'block':'none';}
+async function doSignOut(){document.getElementById('acct-menu').style.display='none';await sb.auth.signOut();CU=null;document.getElementById('app-root').style.display='none';document.getElementById('auth-root').style.display='flex';showSplash();}
+function confirmDeleteAcct(){
+  document.getElementById('acct-menu').style.display='none';
+  openModal(`<div class="modal-header"><span class="modal-title" style="color:var(--error)">Delete account</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body"><p style="font-size:14px;line-height:1.6;">This permanently deletes your account and all <strong>${S.recipes.length} recipes</strong> from the cloud. Cannot be undone.</p>
+  <div><label class="field-label">Type DELETE to confirm</label><input class="field-input" id="del-confirm" placeholder="DELETE"/></div>
+  <div id="del-err" style="display:none;" class="auth-err"></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-red" onclick="doDeleteAcct()">Delete everything</button></div></div>`);
+}
+async function doDeleteAcct(){
+  if(document.getElementById('del-confirm')?.value.trim()!=='DELETE'){document.getElementById('del-confirm').classList.add('err');return;}
+  // Delete all user data then sign out (Supabase cascade handles DB rows)
+  const {error}=await sb.auth.admin?.deleteUser?.(CU.id).catch(()=>({error:true})) || {error:true};
+  // Fallback: just sign out (user can contact support)
+  await doSignOut();
+}
+function showChangePw(){
+  document.getElementById('acct-menu').style.display='none';
+  openModal(`<div class="modal-header"><span class="modal-title">Change password</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <div><label class="field-label">New password</label><div class="field-wrap"><input class="field-input" id="cp-n" type="password" autocomplete="new-password" oninput="updatePwStr(this.value)" placeholder="At least 8 characters"/><button class="pw-toggle" onclick="togglePwV('cp-n',this)" type="button">👁</button></div>
+    <div style="height:3px;border-radius:2px;margin-top:6px;background:var(--border);overflow:hidden;"><div id="pw-bar" style="height:100%;width:0;border-radius:2px;transition:width .3s;background:var(--sage);"></div></div></div>
+    <div><label class="field-label">Confirm new password</label><div class="field-wrap"><input class="field-input" id="cp-n2" type="password" autocomplete="new-password"/><button class="pw-toggle" onclick="togglePwV('cp-n2',this)" type="button">👁</button></div></div>
+    <div id="cp-err" style="display:none;" class="auth-err"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-sage" id="cp-btn" onclick="doChangePw()">Update password</button></div>
+  </div>`);
+}
+async function doChangePw(){
+  const n=document.getElementById('cp-n')?.value,n2=document.getElementById('cp-n2')?.value,btn=document.getElementById('cp-btn'),err=document.getElementById('cp-err');
+  const setE=m=>{err.textContent=m;err.style.display='block';};
+  if(!n||n.length<8)return setE('New password must be at least 8 characters.');
+  if(n!==n2)return setE('Passwords do not match.');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  const {error}=await sb.auth.updateUser({password:n});
+  if(error){btn.disabled=false;btn.textContent='Update password';return setE(error.message);}
+  closeModal();
+}
+
+// ── Claude API ─────────────────────────────────────────────────────────────
+async function callClaude(sys,user,max=2000){
+  const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,system:sys,messages:[{role:'user',content:user}]})});
+  const d=await r.json();return d.content?.[0]?.text??'';
+}
+async function extractRecipe(input){
+  const raw=await callClaude(`You are a recipe extraction engine. Extract ALL details and return ONLY valid JSON — no markdown, no explanation.
+Schema: {"title":string,"description":string,"servings":string,"prepTime":string,"cookTime":string,"totalTime":string,"cuisine":string,"tags":string[],"ingredients":[{"amount":string,"unit":string,"item":string,"notes":string}],"steps":[{"step":number,"text":string}],"tips":string[],"sourceUrl":string|null}`,input,2200);
+  try{return JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{return null;}
+}
+async function buildGroceryList(recipes){
+  const raw=await callClaude(`Consolidate recipe ingredients into a master grocery list. Group by store section. Return ONLY valid JSON.
+Schema: {"sections":[{"name":string,"items":[{"quantity":string,"item":string,"recipes":string[]}]}]}
+Sections: Produce, Dairy & Eggs, Meat & Seafood, Pantry & Dry Goods, Spices & Seasonings, Bakery, Frozen, Other`,JSON.stringify(recipes.map(r=>({title:r.title,ingredients:r.ingredients}))),2000);
+  try{return JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{return null;}
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+const pill=(i,l)=>`<span class="meta-pill">${i} ${esc(l)}</span>`;
+const tagEl=t=>`<span class="tag">${esc(t)}</span>`;
+const wkR=()=>S.recipes.filter(r=>r.weekSelected);
+function filtR(){
+  const q=S.search.toLowerCase();
+  return S.recipes.filter(r=>{
+    const fOk=!S.activeFolder||r.folderId===S.activeFolder;
+    const sOk=!q||r.title.toLowerCase().includes(q)||(r.description||'').toLowerCase().includes(q)||(r.cuisine||'').toLowerCase().includes(q)||(r.tags||[]).some(t=>t.toLowerCase().includes(q));
+    if(S.activeTab==='week')return r.weekSelected&&sOk;
+    return fOk&&sOk;
+  });
+}
+function renderSidebar(){
+  const fl=document.getElementById('folder-list');if(!fl)return;
+  let h=`<div class="si ${!S.activeFolder?'active':''}" onclick="setFolder(null)"><div class="si-left"><div class="si-dot" style="background:#9a9a9a"></div><span class="si-name">All Recipes</span></div><span class="si-count">${S.recipes.length}</span></div>`;
+  S.folders.forEach(f=>{const c=S.recipes.filter(r=>r.folderId===f.id).length;h+=`<div class="si ${S.activeFolder===f.id?'active':''}" onclick="setFolder('${f.id}')"><div class="si-left"><div class="si-dot" style="background:${f.color}"></div><span class="si-name">${esc(f.name)}</span></div><span class="si-count">${c}</span></div>`;});
+  fl.innerHTML=h;
+  const wk=wkR();
+  document.getElementById('week-strip').style.display=wk.length?'block':'none';
+  document.getElementById('week-list').innerHTML=wk.map(r=>`<div class="week-item" onclick="openRecipe('${r.id}')"><span style="color:var(--sage)">✓</span> ${esc(r.title)}</div>`).join('');
+}
+function renderGrid(){
+  const grid=document.getElementById('recipe-grid'),empty=document.getElementById('empty-state'),recipes=filtR(),wk=wkR();
+  const gb=document.getElementById('grocery-btn'),gc=document.getElementById('grocery-count');
+  if(wk.length){gb.style.display='inline-flex';gc.textContent=`Grocery (${wk.length})`;}else gb.style.display='none';
+  const badge=document.getElementById('tab-week-badge');if(badge){badge.textContent=wk.length;badge.style.display=wk.length?'block':'none';}
+  if(!recipes.length){grid.innerHTML='';empty.style.display='flex';return;}
+  empty.style.display='none';
+  grid.innerHTML=recipes.map(r=>`<div class="card ${r.weekSelected?'week-on':''} fade-up" onclick="openRecipe('${r.id}')">
+    <div class="card-title">${esc(r.title)}</div>
+    ${r.description?`<div class="card-desc">${esc(r.description)}</div>`:''}
+    <div class="card-meta">${r.totalTime?pill('⏱',r.totalTime):''}${r.servings?pill('👤',r.servings):''}${r.cuisine?pill('🌍',r.cuisine):''}</div>
+    <div class="card-tags">${(r.tags||[]).slice(0,3).map(tagEl).join('')}</div>
+    <div class="card-footer"><span class="card-date">${fmt(r.createdAt)}</span>
+    <button class="week-toggle ${r.weekSelected?'on':''}" onclick="event.stopPropagation();toggleWeek('${r.id}')">${r.weekSelected?'✓ Week':'+ Week'}</button></div>
+  </div>`).join('');
+}
+function render(){renderSidebar();renderGrid();}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function setFolder(id){S.activeFolder=id;render();}
+async function toggleWeek(id){
+  const r=S.recipes.find(x=>x.id===id);if(!r)return;
+  const nv=!r.weekSelected;
+  S.recipes=S.recipes.map(x=>x.id===id?{...x,weekSelected:nv}:x);
+  render();setSyncing(true);
+  await sb.from('recipes').update({week_selected:nv}).eq('id',id);
+  setSyncing(false);
+}
+async function deleteRecipe(id){
+  if(!confirm('Delete this recipe?'))return;
+  S.recipes=S.recipes.filter(r=>r.id!==id);
+  closeModal();render();setSyncing(true);
+  await sb.from('recipes').delete().eq('id',id);
+  setSyncing(false);
+}
+async function addFolder(){
+  const input=document.getElementById('folder-name-input'),v=input?.value.trim();if(!v)return;
+  const newF={id:uid(),name:v,color:COLORS[S.folders.length%COLORS.length],position:S.folders.length};
+  S.folders.push(newF);input.value='';document.getElementById('folder-input-wrap').style.display='none';render();
+  setSyncing(true);await sb.from('folders').insert({id:newF.id,user_id:CU.id,name:newF.name,color:newF.color,position:newF.position});setSyncing(false);
+}
+function setTab(tab){
+  S.activeTab=tab;['recipes','folders','week','grocery'].forEach(t=>document.getElementById('tab-'+t)?.classList.toggle('active',t===tab));
+  if(tab==='grocery'){showGrocery();return;}if(tab==='folders'){showFoldersMobile();return;}render();
+}
+
+// ── Modal engine ───────────────────────────────────────────────────────────
+function openModal(h){document.getElementById('modal-root').innerHTML=`<div class="modal-bg" id="modal-bg" onclick="if(event.target.id==='modal-bg')closeModal()"><div class="modal"><div class="modal-handle"></div>${h}</div></div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ── Add recipe ─────────────────────────────────────────────────────────────
+function showAdd(pre=''){
+  const opts=S.folders.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  openModal(`<div class="modal-header"><span class="modal-title">Add Recipe</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <div class="share-banner"><div class="share-banner-title">📲 Sharing from another app?</div><div class="share-banner-text">On iPhone: tap <strong>Share ↗</strong> → <strong>Copy Link</strong>, then paste below. Once installed to your Home Screen, Sous can also receive links directly via the share sheet.</div></div>
+    <div><label class="field-label">Paste URL, recipe text, or social caption</label><textarea class="field-textarea" id="add-in" placeholder="https://... or paste any recipe text, Instagram caption, TikTok description…">${esc(pre)}</textarea></div>
+    <div><label class="field-label">Media URL — video or image (optional)</label><input class="field-input" id="add-med" placeholder="YouTube, Vimeo, or image URL"/></div>
+    <div><label class="field-label">Save to folder</label><select class="field-select" id="add-fld">${opts}</select></div>
+    <div id="add-err" style="display:none;" class="auth-err"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-sage" id="add-btn2" onclick="doAdd()">✦ Extract & Save</button></div>
+  </div>`);
+  if(pre)document.getElementById('add-in').value=pre;
+}
+async function doAdd(){
+  const inp=document.getElementById('add-in')?.value.trim(),med=document.getElementById('add-med')?.value.trim(),fld=document.getElementById('add-fld')?.value,btn=document.getElementById('add-btn2'),err=document.getElementById('add-err');
+  if(!inp)return;btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Extracting…';err.style.display='none';
+  try{
+    const r=await extractRecipe(inp);if(!r)throw new Error('Could not parse recipe. Try adding more text.');
+    const full={...r,id:uid(),folderId:fld||null,createdAt:Date.now(),mediaUrls:med?[med]:[],weekSelected:false};
+    S.recipes.unshift(full);closeModal();render();openRecipe(full.id);
+    // Save to Supabase
+    setSyncing(true);
+    await sb.from('recipes').insert(recipeToDb(full,CU.id));
+    setSyncing(false);
+  }catch(e){err.textContent='⚠ '+e.message;err.style.display='block';btn.disabled=false;btn.textContent='✦ Extract & Save';}
+}
+
+// ── Recipe detail ──────────────────────────────────────────────────────────
+function renderMedia(url){
+  if(!url)return'';
+  if(/youtube\.com|youtu\.be/.test(url)){const v=url.match(/(?:v=|youtu\.be\/)([^&?\s]+)/)?.[1];if(v)return`<iframe src="https://www.youtube.com/embed/${v}" style="width:100%;aspect-ratio:16/9;border:none;border-radius:10px;" allowfullscreen></iframe>`;}
+  if(/vimeo\.com/.test(url)){const v=url.match(/vimeo\.com\/(\d+)/)?.[1];if(v)return`<iframe src="https://player.vimeo.com/video/${v}" style="width:100%;aspect-ratio:16/9;border:none;border-radius:10px;" allowfullscreen></iframe>`;}
+  if(/\.(jpg|jpeg|png|gif|webp|avif)(\?|$)/i.test(url))return`<img src="${esc(url)}" style="width:100%;border-radius:10px;object-fit:cover;max-height:320px;" alt=""/>`;
+  return`<a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--sky);font-size:12px;font-family:'DM Mono',monospace;">↗ View Media</a>`;
+}
+function openRecipe(id){
+  const r=S.recipes.find(x=>x.id===id);if(!r)return;
+  const folder=S.folders.find(f=>f.id===r.folderId);
+  const ings=(r.ingredients||[]).map(i=>`<div class="ing-row"><span class="ing-amt">${esc([i.amount,i.unit].filter(Boolean).join(' '))}</span><span style="font-size:14px;">${esc(i.item)}</span>${i.notes?`<span style="font-size:11px;color:var(--text-soft);margin-left:4px;">(${esc(i.notes)})</span>`:''}</div>`).join('');
+  const steps=(r.steps||[]).map((s,i)=>`<div class="step-row"><span class="step-num">${s.step||i+1}</span><p style="font-size:14px;line-height:1.65;">${esc(s.text)}</p></div>`).join('');
+  const tips=(r.tips||[]).length?`<div class="tip-box"><div class="tip-label">Tips & Notes</div>${r.tips.map(t=>`<p style="font-size:13px;color:var(--text-mid);line-height:1.6;margin-bottom:5px;">• ${esc(t)}</p>`).join('')}</div>`:'';
+  openModal(`<div class="modal-header"><span class="modal-title" style="font-family:'Playfair Display',serif;">${esc(r.title)}</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <div class="detail-meta">${r.prepTime?pill('⏱','Prep '+r.prepTime):''}${r.cookTime?pill('🔥','Cook '+r.cookTime):''}${r.servings?pill('👤',r.servings):''}${r.cuisine?pill('🌍',r.cuisine):''}${folder?`<span class="meta-pill"><span style="color:${folder.color}">●</span> ${esc(folder.name)}</span>`:''}</div>
+    ${(r.tags||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${r.tags.map(tagEl).join('')}</div>`:''}
+    ${r.description?`<p style="font-family:'Playfair Display',serif;font-size:16px;font-style:italic;color:var(--text-mid);line-height:1.65;margin-bottom:16px;">${esc(r.description)}</p>`:''}
+    ${(r.mediaUrls||[]).length?`<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px;">${r.mediaUrls.map(renderMedia).join('')}</div>`:''}
+    <div class="detail-sec">Ingredients</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">${ings}</div>
+    <div class="detail-sec">Instructions</div><div>${steps}</div>
+    ${tips}
+    ${r.sourceUrl?`<a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener" style="display:block;margin-top:18px;font-size:11px;color:var(--text-soft);font-family:'DM Mono',monospace;">↗ Original Source</a>`:''}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding-top:18px;margin-top:18px;border-top:1px solid var(--border-soft);">
+      <button id="wk-det" class="btn ${r.weekSelected?'btn-sage':'btn-ghost'}" onclick="toggleWeekDet('${r.id}')">${r.weekSelected?"✓ In this week's plan":"+ Add to this week"}</button>
+      <button class="btn btn-red btn-sm" style="margin-left:auto;" onclick="deleteRecipe('${r.id}')">Delete</button>
+    </div>
+  </div>`);
+}
+function toggleWeekDet(id){toggleWeek(id).then(()=>{const r=S.recipes.find(x=>x.id===id),btn=document.getElementById('wk-det');if(btn&&r){btn.className=`btn ${r.weekSelected?'btn-sage':'btn-ghost'}`;btn.textContent=r.weekSelected?"✓ In this week's plan":"+ Add to this week";}});}
+
+// ── Grocery list ───────────────────────────────────────────────────────────
+let gC={};
+function showGrocery(){
+  const wk=wkR();
+  if(!wk.length){openModal(`<div class="modal-header"><span class="modal-title">Grocery List</span><button class="modal-close" onclick="closeModal()">×</button></div><div class="modal-body"><div class="empty" style="height:auto;padding:40px 0;"><div class="empty-icon">🛒</div><h2>No meals selected</h2><p>Add recipes to "This Week" to build a grocery list.</p></div></div>`);return;}
+  openModal(`<div class="modal-header"><span class="modal-title">Grocery List</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <div style="background:var(--sage-pale);border:1px solid var(--mint);border-radius:10px;padding:14px 16px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-bottom:8px;">This week's meals</div>
+      ${wk.map(r=>`<span style="font-size:13px;display:block;">✓ ${esc(r.title)}</span>`).join('')}
+    </div>
+    <div id="g-body"><button class="btn btn-sage btn-full" onclick="genGrocery()">✦ Build My Grocery List</button></div>
+  </div>`);
+}
+async function genGrocery(){
+  const body=document.getElementById('g-body');body.innerHTML=`<div style="text-align:center;padding:30px 0;color:var(--text-soft);"><span class="spinner spinner-sage" style="width:22px;height:22px;border-width:3px;"></span><p style="margin-top:12px;font-size:13px;">Building your list…</p></div>`;
+  const result=await buildGroceryList(wkR());
+  if(!result){body.innerHTML=`<p style="color:var(--error);font-size:13px;">⚠ Could not generate list.</p><button class="btn btn-ghost btn-sm" onclick="genGrocery()">Retry</button>`;return;}
+  gC={};let h='<div style="display:flex;flex-direction:column;gap:18px;">';
+  result.sections?.forEach(sec=>{if(!sec.items?.length)return;h+=`<div><div class="g-sec-title">${esc(sec.name)}</div>`;sec.items.forEach((item,i)=>{const k=`${sec.name}-${i}`.replace(/\s/g,'_');h+=`<div class="g-item" id="gi-${k}" onclick="togG('${k}')"><div class="g-check" id="gc-${k}"></div><span class="g-qty">${esc(item.quantity||'')}</span><span style="font-size:13px;flex:1;">${esc(item.item)}</span>${item.recipes?.length?`<span style="font-size:10px;color:var(--text-soft);text-align:right;max-width:90px;line-height:1.3;">${item.recipes.map(esc).join(', ')}</span>`:''}</div>`;});h+=`</div>`;});
+  h+=`</div><div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="genGrocery()">↺ Regenerate</button><button class="btn btn-ghost btn-sm" onclick="uncheckG()">Uncheck All</button></div>`;
+  body.innerHTML=h;
+}
+function togG(k){gC[k]=!gC[k];document.getElementById('gi-'+k)?.classList.toggle('checked',!!gC[k]);const c=document.getElementById('gc-'+k);if(c)c.innerHTML=gC[k]?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'';}
+function uncheckG(){gC={};document.querySelectorAll('.g-item').forEach(el=>el.classList.remove('checked'));document.querySelectorAll('.g-check').forEach(el=>el.innerHTML='');}
+
+// ── Folders mobile ─────────────────────────────────────────────────────────
+function showFoldersMobile(){
+  const rows=S.folders.map(f=>{const c=S.recipes.filter(r=>r.folderId===f.id).length;return`<div onclick="setFolderMob('${f.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border-soft);cursor:pointer;"><div style="width:12px;height:12px;border-radius:50%;background:${f.color};flex-shrink:0;"></div><span style="flex:1;font-size:15px;">${esc(f.name)}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-soft);">${c}</span></div>`;}).join('');
+  openModal(`<div class="modal-header"><span class="modal-title">Folders</span><button class="modal-close" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <div onclick="setFolderMob(null)" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border-soft);cursor:pointer;"><div style="width:12px;height:12px;border-radius:50%;background:#9a9a9a;flex-shrink:0;"></div><span style="flex:1;font-size:15px;">All Recipes</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-soft);">${S.recipes.length}</span></div>
+    ${rows}
+    <div style="margin-top:16px;display:flex;gap:8px;"><input class="field-input" id="mob-fld-in" placeholder="New folder name" maxlength="30"/><button class="btn btn-sage" onclick="addFolderMob()">Add</button></div>
+  </div>`);
+}
+function setFolderMob(id){S.activeFolder=id;S.activeTab='recipes';document.getElementById('tab-recipes')?.classList.add('active');document.getElementById('tab-folders')?.classList.remove('active');closeModal();render();}
+async function addFolderMob(){
+  const v=document.getElementById('mob-fld-in')?.value.trim();if(!v)return;
+  const newF={id:uid(),name:v,color:COLORS[S.folders.length%COLORS.length],position:S.folders.length};
+  S.folders.push(newF);showFoldersMobile();
+  setSyncing(true);await sb.from('folders').insert({id:newF.id,user_id:CU.id,name:newF.name,color:newF.color,position:newF.position});setSyncing(false);
+}
+
+// ── Share target + install ─────────────────────────────────────────────────
+function checkShareTarget(){
+  const p=new URLSearchParams(location.search);
+  if(p.get('action')==='add')showAdd();
+  if(p.get('shared')){try{const s=JSON.parse(decodeURIComponent(p.get('shared')));showAdd([s.url,s.text,s.title].filter(Boolean).join('\n'));}catch{}}
+  if(p.get('action')||p.get('shared'))window.history.replaceState({},'','/');
+}
+function showInstallTip(){
+  const tip=document.getElementById('install-tip');
+  if(!tip||navigator.standalone||window.matchMedia('(display-mode:standalone)').matches)return;
+  if(!/iPad|iPhone|iPod/.test(navigator.userAgent)||localStorage.getItem('itd'))return;
+  setTimeout(()=>{tip.style.display='block';},4000);
+  document.getElementById('itc')?.addEventListener('click',()=>{tip.style.display='none';localStorage.setItem('itd','1');});
+}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ── Session handling ───────────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    CU = session.user;
+    if (document.getElementById('app-root').style.display === 'none') {
+      await bootApp();
+    }
+  } else if (event === 'SIGNED_OUT') {
+    CU = null;
+    document.getElementById('app-root').style.display = 'none';
+    document.getElementById('auth-root').style.display = 'flex';
+    showSplash();
+  }
+});
+
+// Initial session check
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) { CU = session.user; await bootApp(); }
+})();
+</script>
+</body>
+</html>
