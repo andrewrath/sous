@@ -20,11 +20,11 @@ module.exports = async function handler(req, res) {
         const pageText = await new Promise((resolve, reject) => {
           const options = {
             hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
+            path: urlObj.pathname + (urlObj.search || ''),
             method: 'GET',
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept': 'text/html,application/xhtml+xml',
             },
             timeout: 8000,
           };
@@ -38,7 +38,6 @@ module.exports = async function handler(req, res) {
           req2.end();
         });
 
-        // Strip HTML tags and trim
         const text = pageText
           .replace(/<script[\s\S]*?<\/script>/gi, '')
           .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -56,7 +55,7 @@ module.exports = async function handler(req, res) {
     const https = require('https');
     const body = JSON.stringify({ model, max_tokens, system, messages });
 
-    const claudeResponse = await new Promise((resolve, reject) => {
+    const rawResponse = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'api.anthropic.com',
         path: '/v1/messages',
@@ -78,7 +77,22 @@ module.exports = async function handler(req, res) {
       req2.end();
     });
 
-    const data = JSON.parse(claudeResponse);
+    console.log('Claude raw response:', rawResponse.slice(0, 500));
+
+    let data;
+    try {
+      data = JSON.parse(rawResponse);
+    } catch (parseErr) {
+      console.error('JSON parse error:', parseErr.message, 'Raw:', rawResponse.slice(0, 200));
+      return res.status(500).json({ error: 'Invalid JSON from Claude', raw: rawResponse.slice(0, 200) });
+    }
+
+    // If Claude returned an API error, pass it through clearly
+    if (data.error) {
+      console.error('Claude API error:', JSON.stringify(data.error));
+      return res.status(400).json({ error: data.error.message || 'Claude API error', type: data.error.type });
+    }
+
     return res.status(200).json(data);
 
   } catch (err) {
